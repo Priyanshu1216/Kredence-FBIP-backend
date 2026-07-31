@@ -95,7 +95,29 @@ def delete_business(business_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Bhai, is ID ka koi business nahi mila!")
         
     # 2. File ko kachre ke dabbe mein daal do (Delete kar do)
-    db.delete(business_to_delete)
+    db.delete(business_to_delete) 
+
+    # --- NAYA RASTA (POST): Kisi business ke liye Review add karne ke liye ---
+@app.post("/api/v1/businesses/{business_id}/reviews/", response_model=schemas.ReviewResponse)
+def create_review_for_business(business_id: int, review: schemas.ReviewCreate, db: Session = Depends(get_db)):
+    # 1. Check karo ki kya wo business (ID) godown mein hai ya nahi?
+    db_business = db.query(models.Business).filter(models.Business.id == business_id).first()
+    if db_business is None:
+        raise HTTPException(status_code=404, detail="Bhai, is ID ka koi business nahi mila, toh review kiska likhun?")
+        
+    # 2. Review ko pack karo aur usme business ki Kundi (business_id) phasa do
+    db_review = models.Review(
+        rating=review.rating, 
+        comment=review.comment, 
+        business_id=business_id
+    )
+    
+    # 3. Godown mein add karo aur save (commit) karo
+    db.add(db_review)
+    db.commit()
+    db.refresh(db_review)
+    
+    return db_review
     
     # 3. Godown mein changes save (commit) karo
     db.commit()
