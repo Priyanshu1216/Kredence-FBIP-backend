@@ -1,5 +1,19 @@
 from pydantic import BaseModel
 
+# --- 0. USERS KE BOUNCERS ---
+class UserCreate(BaseModel):
+    email: str
+    password: str  # User apna asli password dega
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    is_active: bool
+    # Dhyan rahe: Hum response mein password wapas nahi bhejte (Security!)
+
+    class Config:
+        from_attributes = True
+
 # --- 1. REVIEWS KE BOUNCERS (Naye wale) ---
 class ReviewBase(BaseModel):
     rating: int
@@ -31,3 +45,12 @@ class BusinessResponse(BusinessBase):
 
     class Config:
         from_attributes = True
+
+# --- 3. LOGIN KE BOUNCERS ---
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

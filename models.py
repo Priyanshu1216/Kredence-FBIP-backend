@@ -25,3 +25,12 @@ class Review(Base):
 
     # Ye dhaga wapas Business ki taraf jata hai
     business = relationship("Business", back_populates="reviews")
+
+# 3. Nayi Rack: Users (Login karne walon ke liye)
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)          # Asli password nahi, khufiya password save hoga
+    is_active = Column(Boolean, default=True) # Account chalu hai ya band# 3. Nayi Rack: Users (Login karne walon ke liye)

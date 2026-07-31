@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-import models, schemas
+import models, schemas, auth
 from database import SessionLocal
 
 # Ye FastAPI ka naya tool hai jo alag department banata hai
@@ -56,7 +56,7 @@ def update_business(business_id: int, business_data: schemas.BusinessCreate, db:
 
 # 5. DELETE BUSINESS
 @router.delete("/{business_id}")
-def delete_business(business_id: int, db: Session = Depends(get_db)):
+def delete_business(business_id: int, db: Session = Depends(get_db), current_user: str = Depends(auth.get_current_user)):
     business_to_delete = db.query(models.Business).filter(models.Business.id == business_id).first()
     if business_to_delete is None:
         raise HTTPException(status_code=404, detail="Bhai, is ID ka koi business nahi mila!")

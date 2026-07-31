@@ -3,7 +3,7 @@ from database import engine
 import models
 
 # Ye line tumhare naye kamre (router) ko import karti hai
-from routers import businesses 
+from routers import businesses, users
 
 # Godown mein Racks banayegi ye line
 models.Base.metadata.create_all(bind=engine)
@@ -12,6 +12,7 @@ app = FastAPI(title="FBIP")
 
 # JADOO KI LINE: Ye Receptionist ko batati hai ki Businesses wale department ka rasta kahan hai
 app.include_router(businesses.router)
+app.include_router(users.router)
 
 # --- BASE ROUTES (Server check karne ke liye) ---
 @app.get("/")
