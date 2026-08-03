@@ -1,20 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
+from typing import Optional, List
 
-# --- 0. USERS KE BOUNCERS ---
-class UserCreate(BaseModel):
-    email: str
-    password: str  # User apna asli password dega
-
-class UserResponse(BaseModel):
-    id: int
-    email: str
-    is_active: bool
-    # Dhyan rahe: Hum response mein password wapas nahi bhejte (Security!)
-
-    class Config:
-        from_attributes = True
-
-# --- 1. REVIEWS KE BOUNCERS (Naye wale) ---
+# 1. --- REVIEW SCHEMAS (Jo miss ho gaya tha!) ---
 class ReviewBase(BaseModel):
     rating: int
     comment: str
@@ -29,28 +16,47 @@ class ReviewResponse(ReviewBase):
     class Config:
         from_attributes = True
 
-# --- 2. BUSINESS KE BOUNCERS (Purane wale + Naya update) ---
+
+# 2. --- BUSINESS SCHEMAS ---
 class BusinessBase(BaseModel):
     name: str
-    fssai_number: str
+    category: str
+    location: str
+    fssai_number: Optional[str] = None  # Exact models.py wala naam
     is_verified: bool = False
+    
+    # Naye Premium Data Columns 👇
+    phone_number: Optional[str] = None
+    is_operational: bool = True
 
 class BusinessCreate(BusinessBase):
     pass
 
-# Is aakhri bouncer mein humne 'reviews' wali line jodi hai
 class BusinessResponse(BusinessBase):
     id: int
-    reviews: list[ReviewResponse] = []  # Ye line business ke sath uske reviews layegi
+    reviews: List[ReviewResponse] = []  # Ye dhaga API mein Businesses ke saath Reviews bhi dikhayega!
 
     class Config:
         from_attributes = True
 
-# --- 3. LOGIN KE BOUNCERS ---
-class UserLogin(BaseModel):
-    email: str
-    password: str
 
+# 3. --- USER SCHEMAS ---
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    role: Optional[str] = "user"
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    is_active: bool
+    role: str
+
+    class Config:
+        from_attributes = True
+
+
+# 4. --- TOKEN SCHEMAS ---
 class Token(BaseModel):
     access_token: str
     token_type: str
