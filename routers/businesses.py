@@ -20,7 +20,7 @@ def get_db():
 # 1. CREATE BUSINESS
 @router.post("/", response_model=schemas.BusinessResponse)
 def create_business(business: schemas.BusinessCreate, db: Session = Depends(get_db)):
-    db_business = models.Business(name=business.name, fssai_number=business.fssai_number, is_verified=business.is_verified)
+    db_business = models.Business(**business.dict())
     db.add(db_business)
     db.commit()
     db.refresh(db_business)
