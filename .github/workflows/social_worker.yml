@@ -1,0 +1,27 @@
+name: OreDial Cloud Social Enricher
+
+on:
+  schedule:
+    # Har 1 ghante me khud chalega
+    - cron: '0 * * * *'
+  workflow_dispatch: # Manual test button ke liye
+
+jobs:
+  enrich-leads:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install psycopg2-binary requests beautifulsoup4 ddgs
+
+      - name: Run Cloud Social Engine
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python social_engine_cloud.py
