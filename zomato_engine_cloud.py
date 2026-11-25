@@ -25,8 +25,8 @@ def check_whatsapp_status(phone_number):
     if len(clean_num) >= 10:
         last_10 = clean_num[-10:]
         if last_10[0] in ['6', '7', '8', '9']:
-            return 1, last_10
-    return 0, str(phone_number)
+            return True, last_10
+    return False, str(phone_number)
 
 def extract_deep_details(lead_item):
     b_name = lead_item["business_name"]
@@ -154,6 +154,15 @@ def run_cloud_zomato():
     conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
 
+    # Ensure optional rating/photo columns exist in Neon leads table
+    cur.execute("""
+        ALTER TABLE leads
+        ADD COLUMN IF NOT EXISTS dining_rating VARCHAR,
+        ADD COLUMN IF NOT EXISTS delivery_rating VARCHAR,
+        ADD COLUMN IF NOT EXISTS photo_url VARCHAR;
+    """)
+    conn.commit()
+
     # Atomic Zone Lock: Parallel runners aapas me kabhi ek zone nahi uthayenge
     cur.execute("""
         WITH claimed AS (
@@ -231,16 +240,17 @@ def run_cloud_zomato():
                     b_name, deep_data, fallback_map = future.result()
                     has_wa, final_contact = check_whatsapp_status(deep_data["phone"])
                     final_map = deep_data["map_url"] if deep_data["map_url"] != "Not Available" else fallback_map
+                    clean_lic = None if deep_data["fssai"] in ("Not Available", "", None) else deep_data["fssai"]
 
                     cur.execute("""
                         INSERT INTO leads (
-                            business_name, contact, has_whatsapp, fssai_name, licence_no,
-                            map_location, city, dining_rating, delivery_rating, photo_url, status
+                            business_name, phone, has_whatsapp, fssai_name, licence_no,
+                            location, city, dining_rating, delivery_rating, photo_url, status
                         )
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'raw')
-                        ON CONFLICT (business_name, city) DO NOTHING;
+                        ON CONFLICT (licence_no) DO NOTHING;
                     """, (
-                        b_name, final_contact, has_wa, b_name, deep_data["fssai"],
+                        b_name, final_contact, has_wa, b_name, clean_lic,
                         final_map, city, deep_data["dining_rating"], deep_data["delivery_rating"],
                         deep_data["photo_url"]
                     ))
