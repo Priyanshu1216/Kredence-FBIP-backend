@@ -1,0 +1,33 @@
+name: OreDial Cloud Zomato Scraper
+
+on:
+  schedule:
+    # Off-peak minutes par har 20 min me chalega (3 machines x 2 zones = 6 zones/cycle)
+    - cron: '4,24,44 * * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape-zones:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: [1, 2, 3]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies & Firefox
+        run: |
+          pip install psycopg2-binary beautifulsoup4 curl_cffi playwright
+          playwright install firefox
+
+      - name: Run Cloud Zomato Worker ${{ matrix.worker }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python zomato_engine_cloud.py
