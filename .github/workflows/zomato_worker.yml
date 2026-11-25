@@ -2,7 +2,6 @@ name: OreDial Cloud Zomato Scraper
 
 on:
   schedule:
-    # Off-peak minutes par har 20 min me chalega (3 machines x 2 zones = 6 zones/cycle)
     - cron: '4,24,44 * * * *'
   workflow_dispatch:
 
@@ -13,6 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         worker: [1, 2, 3]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,5 +29,5 @@ jobs:
 
       - name: Run Cloud Zomato Worker ${{ matrix.worker }}
         env:
-          DATABASE_URL: $ {{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python zomato_engine_cloud.py

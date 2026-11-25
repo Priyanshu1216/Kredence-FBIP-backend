@@ -8,7 +8,10 @@ from curl_cffi import requests as cffi_requests
 from playwright.sync_api import sync_playwright
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+if DATABASE_URL.startswith("psql "):
+    DATABASE_URL = DATABASE_URL[5:].strip()
+DATABASE_URL = DATABASE_URL.strip("'\"")
 ZONES_PER_RUN = 2   # Har worker ek run me 2 zones scrape karega
 MAX_THREADS = 3     # Zomato rate-limit se bachne ke liye 3 safe threads
 
