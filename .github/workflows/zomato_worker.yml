@@ -29,5 +29,5 @@ jobs:
 
       - name: Run Cloud Zomato Worker ${{ matrix.worker }}
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: $ {{ secrets.DATABASE_URL }}
         run: python zomato_engine_cloud.py
