@@ -10,14 +10,12 @@ from ddgs import DDGS
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# SSL warnings disable karne ke liye
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
-BATCH_SIZE = 100   # Ek run me 100 leads (~3-4 mins)
-MAX_WORKERS = 3    # 3 parallel workers (fast + rate-limit safe)
+BATCH_SIZE = 120   # Per runner 120 leads (~5-6 mins)
+MAX_WORKERS = 4    # 4 threads per runner
 
-# 🛡️ JUNK FILTER: In kachra links ko reject karna hai
 JUNK_KEYWORDS = [
     '/p/', '/reel/', '/explore/', '/tags/', '/stories/', '/locations/',
     '/groups/', '/events/', '/marketplace/', '/pages/', '/posts/', '/dir/',
@@ -33,9 +31,7 @@ def is_clean_profile(url, platform):
             return False
     return True
 
-# 🧠 THE LIE DETECTOR: Username Matching Engine
 def verify_username_authenticity(business_name, url):
-    """1000% Real Account Check: URL se username nikal kar business name se match karta hai."""
     try:
         clean_url = url.split('?')[0].strip('/')
         username = clean_url.split('/')[-1].replace('_', '').replace('.', '').lower()
@@ -48,7 +44,6 @@ def verify_username_authenticity(business_name, url):
     except Exception:
         return False
 
-# 🕵️‍♂️ BING HTML FALLBACK (Anti-Ban Weapon)
 def search_bing_html(query):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -67,7 +62,6 @@ def search_bing_html(query):
     return links
 
 def scrape_website_for_socials(url, business_name):
-    """Website ke andar jakar original social links nikalna aur unhe verify karna."""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         res = requests.get(url, headers=headers, timeout=6, verify=False)
@@ -87,7 +81,6 @@ def scrape_website_for_socials(url, business_name):
         return "Not Available", "Not Available"
 
 def get_1000_percent_real_links(b_name, city, platform):
-    """Smart Dorking Search (DDGS with Empty-Result & Error Bing Fallback)."""
     query = f'"{b_name}" {city} official {platform} restaurant OR cafe'
     platform_domain = f"{platform}.com"
 
@@ -99,7 +92,6 @@ def get_1000_percent_real_links(b_name, city, platform):
     except Exception:
         urls = []
 
-    # Agar DDGS khali result de ya fail ho, toh turant Bing chalega
     if not urls:
         urls = search_bing_html(query)
 
@@ -111,7 +103,6 @@ def get_1000_percent_real_links(b_name, city, platform):
     return "Not Available"
 
 def enrich_single_lead(lead):
-    """Worker thread: sirf network search karega, DB touch nahi karega."""
     lead_id, b_name, city = lead
     final_insta, final_fb = "Not Available", "Not Available"
 
@@ -120,7 +111,7 @@ def enrich_single_lead(lead):
         website_query = f"{b_name} {city} official website restaurant"
         website_url = ""
         try:
-            time.sleep(random.uniform(0.6, 1.5))
+            time.sleep(random.uniform(0.4, 1.0))
             with DDGS() as ddgs:
                 results = list(ddgs.text(website_query, max_results=1))
                 if results:
@@ -128,7 +119,6 @@ def enrich_single_lead(lead):
         except Exception:
             website_url = ""
 
-        # Empty-result fallback to Bing
         if not website_url:
             urls = search_bing_html(website_query)
             if urls:
@@ -143,13 +133,13 @@ def enrich_single_lead(lead):
     except Exception:
         pass
 
-    # LAYER 2: Direct Social Search (agar website se nahi mila)
+    # LAYER 2: Direct Social Search
     if final_insta == "Not Available":
-        time.sleep(random.uniform(1.0, 2.0))
+        time.sleep(random.uniform(0.7, 1.4))
         final_insta = get_1000_percent_real_links(b_name, city, "instagram")
 
     if final_fb == "Not Available":
-        time.sleep(random.uniform(1.0, 2.0))
+        time.sleep(random.uniform(0.7, 1.4))
         final_fb = get_1000_percent_real_links(b_name, city, "facebook")
 
     return lead_id, b_name, final_insta, final_fb
@@ -162,15 +152,24 @@ def run_cloud_enricher():
     conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
 
-    # Sirf 'raw' leads ka micro-batch uthao
+    # Atomic Batch Claim: 5 parallel runners aapas me kabhi nahi takrayenge
     cur.execute("""
-        SELECT id, business_name, city
-        FROM leads
-        WHERE status = 'raw'
-        ORDER BY id ASC
-        LIMIT %s
+        WITH claimed AS (
+            SELECT id
+            FROM leads
+            WHERE status = 'raw'
+            ORDER BY id ASC
+            LIMIT %s
+            FOR UPDATE SKIP LOCKED
+        )
+        UPDATE leads
+        SET status = 'processing', updated_at = CURRENT_TIMESTAMP
+        FROM claimed
+        WHERE leads.id = claimed.id
+        RETURNING leads.id, leads.business_name, leads.city;
     """, (BATCH_SIZE,))
     leads = cur.fetchall()
+    conn.commit()
 
     if not leads:
         print("🎉 Koi bhi 'raw' lead pending nahi hai! Sab enriched hain.")
@@ -178,7 +177,7 @@ def run_cloud_enricher():
         conn.close()
         return
 
-    print(f"🚀 {len(leads)} raw leads mili hain. {MAX_WORKERS} parallel workers start ho rahe hain...")
+    print(f"🚀 {len(leads)} unique leads lock ho gayi hain. {MAX_WORKERS} workers start...")
 
     completed = 0
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
