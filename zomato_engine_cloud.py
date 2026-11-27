@@ -25,8 +25,8 @@ def check_whatsapp_status(phone_number):
     if len(clean_num) >= 10:
         last_10 = clean_num[-10:]
         if last_10[0] in ['6', '7', '8', '9']:
-            return True, last_10
-    return False, str(phone_number)
+            return 1, last_10
+    return 0, str(phone_number)
 
 def extract_deep_details(lead_item):
     b_name = lead_item["business_name"]
