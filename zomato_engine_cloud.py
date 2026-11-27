@@ -163,6 +163,7 @@ def run_cloud_zomato():
     """)
     conn.commit()
 
+    cur.execute("UPDATE zones SET status = 'pending' WHERE status = 'completed' AND COALESCE(leads_found, 0) = 0;"); conn.commit()
     # Atomic Zone Lock: Parallel runners aapas me kabhi ek zone nahi uthayenge
     cur.execute("""
         WITH claimed AS (
@@ -248,7 +249,7 @@ def run_cloud_zomato():
                             location, city, dining_rating, delivery_rating, photo_url, status
                         )
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'raw')
-                        ON CONFLICT (licence_no) DO NOTHING;
+                        ;
                     """, (
                         b_name, final_contact, has_wa, b_name, clean_lic,
                         final_map, city, deep_data["dining_rating"], deep_data["delivery_rating"],
