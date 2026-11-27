@@ -25,7 +25,10 @@ try:
 except Exception as fb_err:
     print("Firebase init skipped:", fb_err)
 if not firebase_admin._apps:
-    firebase_admin.initialize_app(cred)
+    try:
+        firebase_admin.initialize_app(cred)
+    except Exception as e:
+        print("Firebase app init skipped:", e)
 
 class TokenRequest(BaseModel):
     user_id: str
