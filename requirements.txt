@@ -61,5 +61,4 @@ psycopg2-binary
 email-validator
 slowapi
 apscheduler
-cashfree_service
 firebase_admin
