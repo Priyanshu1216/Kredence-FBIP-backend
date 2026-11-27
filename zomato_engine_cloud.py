@@ -40,7 +40,8 @@ def extract_deep_details(lead_item):
     }
 
     if not restaurant_url:
-        return b_name, data, fallback_map
+        data["zomato_url"] = restaurant_url
+    return b_name, data, fallback_map
 
     try:
         time.sleep(random.uniform(1.0, 2.2))
@@ -109,6 +110,7 @@ def extract_deep_details(lead_item):
     if data["fssai"] == "16666666666666":
         data["fssai"] = "Not Available"
 
+    data["zomato_url"] = restaurant_url
     return b_name, data, fallback_map
 
 def get_zone_html_with_scroll(url):
@@ -159,7 +161,9 @@ def run_cloud_zomato():
         ALTER TABLE leads
         ADD COLUMN IF NOT EXISTS dining_rating VARCHAR,
         ADD COLUMN IF NOT EXISTS delivery_rating VARCHAR,
-        ADD COLUMN IF NOT EXISTS photo_url VARCHAR;
+        ADD COLUMN IF NOT EXISTS photo_url VARCHAR,
+        ADD COLUMN IF NOT EXISTS zomato_url VARCHAR,
+        ADD COLUMN IF NOT EXISTS last_verified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     """)
     conn.commit()
 
@@ -246,14 +250,14 @@ def run_cloud_zomato():
                     cur.execute("""
                         INSERT INTO leads (
                             business_name, phone, has_whatsapp, fssai_name, licence_no,
-                            location, city, dining_rating, delivery_rating, photo_url, status
+                            location, city, dining_rating, delivery_rating, photo_url, zomato_url, last_verified_at, status
                         )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'raw')
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, 'raw')
                         ;
                     """, (
                         b_name, final_contact, has_wa, b_name, clean_lic,
                         final_map, city, deep_data["dining_rating"], deep_data["delivery_rating"],
-                        deep_data["photo_url"]
+                        deep_data["photo_url"], deep_data.get("zomato_url", "")
                     ))
                     conn.commit()
                     global_seen.add(normalize_name(b_name))

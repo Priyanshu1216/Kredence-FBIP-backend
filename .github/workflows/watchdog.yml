@@ -1,0 +1,27 @@
+﻿name: OreDial 48-Hr Watchdog & Live Filter
+
+on:
+  # Phase 1 complete hone ke baad neeche wali 2 lines se '#' hata dena:
+  # schedule:
+  #   - cron: '43 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  watchdog-filter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install psycopg2-binary curl_cffi ddgs
+
+      - name: Run 48-Hr Watchdog & Zomato Live Verifier
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python watchdog_cloud.py
