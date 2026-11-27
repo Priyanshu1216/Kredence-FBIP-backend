@@ -20,7 +20,10 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 
 # Firebase Admin Setup
-cred = credentials.Certificate("firebase_credentials.json")
+try:
+    cred = credentials.Certificate("firebase_credentials.json")
+except Exception as fb_err:
+    print("Firebase init skipped:", fb_err)
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
