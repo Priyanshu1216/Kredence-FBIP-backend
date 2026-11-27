@@ -27,7 +27,7 @@ def create_cashfree_order(order_id: str, amount: float, customer_id: str, custom
             "customer_phone": customer_phone
         },
         "order_meta": {
-            "return_url": f"http://localhost:3000/dashboard?order_id={order_id}"
+            "return_url": f"https://oredial.vercel.app/dashboard?order_id={order_id}"
         }
     }
     

@@ -520,6 +520,8 @@ def create_order(req: OrderRequest):
     customer_id = f"CUST_{uuid.uuid4().hex[:8].upper()}"
     try:
         response = create_cashfree_order(order_id=order_id, amount=req.amount, customer_id=customer_id, customer_phone=req.customer_phone, customer_email=req.customer_email)
+        if not response.get("payment_session_id"):
+            raise HTTPException(status_code=400, detail=response.get("message", "Cashfree keys missing or invalid on server"))
         return response
     except Exception as e: raise HTTPException(status_code=500, detail=f"Payment Gateway Error: {str(e)}")
 
@@ -556,9 +558,10 @@ def verify_otp(req: OtpVerifyRequest):
     conn = pg_compat.connect("oredial.db")
     cursor = conn.cursor()
     expiry_date = (datetime.now() + timedelta(days=90)).strftime('%Y-%m-%d %H:%M:%S')
-    cursor.execute("INSERT INTO users (email, password, credits, credit_expiry) VALUES (?, ?, ?, ?)", 
+    cursor.execute("INSERT INTO users (email, password, credits, credit_expiry) VALUES (?, ?, ?, ?) RETURNING id", 
                    (req.identifier, record["password"], 5.0, expiry_date))
-    user_id = cursor.lastrowid
+    row = cursor.fetchone()
+    user_id = row["id"] if isinstance(row, dict) else (row[0] if row else cursor.lastrowid)
     conn.commit()
     conn.close()
     del otp_storage[req.identifier]
