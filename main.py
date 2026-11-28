@@ -627,5 +627,8 @@ def get_city_counts():
     counts["Noida / Greater Noida"] = noida_total
     counts["Haryana"] = haryana_total
         
+    cursor.execute("SELECT COUNT(*) FROM leads WHERE status IN ('Active', 'enriched', 'raw')")
+    tot_row = cursor.fetchone()
+    exact_total = int((tot_row["count"] if isinstance(tot_row, dict) else tot_row[0]) or 0)
     conn.close()
-    return {"city_counts": counts}
+    return {"city_counts": counts, "total_leads": exact_total}
